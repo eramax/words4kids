@@ -1,0 +1,466 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>بطاقات القراءة</title>
+  <style>
+    :root {
+      --bg1: #0b1220;
+      --bg2: #111b2f;
+      --bg3: #17112a;
+      --card: rgba(17, 24, 39, 0.82);
+      --text: #f8fafc;
+      --muted: #cbd5e1;
+      --accent: #fbbf24;
+      --accent2: #22d3ee;
+      --shadow: 0 24px 70px rgba(0, 0, 0, 0.42);
+      --radius: 32px;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      font-family: Tahoma, "Segoe UI", Arial, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top right, rgba(251, 191, 36, 0.18), transparent 30%),
+        radial-gradient(circle at left center, rgba(34, 211, 238, 0.15), transparent 28%),
+        radial-gradient(circle at bottom right, rgba(168, 85, 247, 0.12), transparent 24%),
+        linear-gradient(135deg, var(--bg1), var(--bg2) 55%, var(--bg3));
+      overflow: hidden;
+    }
+
+    .app {
+      min-height: 100%;
+      display: flex;
+      flex-direction: column;
+      padding: 20px;
+      gap: 16px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 16px;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .topbar-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .pill {
+      background: rgba(15, 23, 42, 0.72);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 999px;
+      padding: 10px 16px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.18);
+      backdrop-filter: blur(10px);
+    }
+
+    .stage {
+      flex: 1;
+      display: grid;
+      place-items: center;
+      position: relative;
+    }
+
+    .card {
+      width: min(92vw, 860px);
+      height: min(68vh, 560px);
+      border-radius: var(--radius);
+      background: var(--card);
+      box-shadow: var(--shadow);
+      border: 1px solid rgba(255,255,255,0.08);
+      display: grid;
+      place-items: center;
+      text-align: center;
+      padding: 28px;
+      position: relative;
+      transform: translateY(0);
+      transition: transform 180ms ease, opacity 180ms ease;
+      backdrop-filter: blur(14px);
+      user-select: none;
+    }
+
+    .card.flash {
+      transform: scale(0.985);
+      opacity: 0.88;
+    }
+
+    .word {
+      font-size: clamp(56px, 12vw, 132px);
+      line-height: 1.25;
+      font-weight: 800;
+      letter-spacing: 0;
+      max-width: 100%;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .subtext {
+      margin-top: 18px;
+      font-size: clamp(16px, 2vw, 22px);
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .controls {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      padding-bottom: 4px;
+    }
+
+    button {
+      border: 0;
+      border-radius: 18px;
+      padding: 14px 20px;
+      font: inherit;
+      font-weight: 800;
+      color: #0b1220;
+      background: linear-gradient(135deg, var(--accent), #f97316);
+      box-shadow: 0 14px 30px rgba(245, 158, 11, 0.28);
+      cursor: pointer;
+      min-width: 110px;
+    }
+
+    button.secondary {
+      background: linear-gradient(135deg, var(--accent2), #06b6d4);
+      box-shadow: 0 14px 30px rgba(14, 165, 164, 0.24);
+    }
+
+    button.ghost {
+      background: rgba(15, 23, 42, 0.76);
+      color: var(--text);
+      border: 1px solid rgba(255,255,255,0.08);
+      box-shadow: 0 10px 22px rgba(0,0,0,0.18);
+    }
+
+    .hint {
+      text-align: center;
+      color: rgba(203, 213, 225, 0.8);
+      font-size: 14px;
+      padding-bottom: 4px;
+    }
+
+    @media (max-width: 640px) {
+      .app { padding: 12px; }
+      .topbar { padding: 8px 4px; font-size: 14px; }
+      .card { height: min(64vh, 500px); border-radius: 24px; }
+      button { min-width: 96px; padding: 12px 16px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <div class="topbar-left">
+        <div class="pill" id="counter">0 / 0</div>
+        <button class="ghost" id="shuffleBtn">خلط</button>
+      </div>
+      <div class="pill" id="mode">بطاقات القراءة</div>
+    </header>
+
+    <section class="stage">
+      <div class="card" id="card" aria-live="polite">
+        <div>
+          <div class="word" id="word">...</div>
+          <div class="subtext" id="subtext">اضغط التالي أو السابق</div>
+        </div>
+      </div>
+    </section>
+
+    <nav class="controls" aria-label="بطاقات التحكم">
+      <button class="ghost" id="prevBtn">السابق</button>
+      <button class="secondary" id="nextBtn">التالي</button>
+    </nav>
+
+    <div class="hint">يمكنك استخدام الأسهم في لوحة المفاتيح أو النقر على الشاشة.</div>
+  </main>
+
+  <script>
+    const state = {
+      words: [],
+      index: 0,
+    };
+
+    const card = document.getElementById("card");
+    const wordEl = document.getElementById("word");
+    const subtextEl = document.getElementById("subtext");
+    const counterEl = document.getElementById("counter");
+
+    function flash() {
+      card.classList.add("flash");
+      window.setTimeout(() => card.classList.remove("flash"), 160);
+    }
+
+    function render() {
+      const total = state.words.length;
+      const current = state.words[state.index];
+      wordEl.textContent = current?.text ?? "لا توجد كلمات";
+      subtextEl.textContent = "";
+      subtextEl.style.display = "none";
+      counterEl.textContent = `${total ? state.index + 1 : 0} / ${total}`;
+      document.title = current?.text ? `${current.text} - بطاقات القراءة` : "بطاقات القراءة";
+    }
+
+    function next() {
+      if (!state.words.length) return;
+      state.index = (state.index + 1) % state.words.length;
+      flash();
+      render();
+    }
+
+    function prev() {
+      if (!state.words.length) return;
+      state.index = (state.index - 1 + state.words.length) % state.words.length;
+      flash();
+      render();
+    }
+
+    function shuffle() {
+      for (let i = state.words.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [state.words[i], state.words[j]] = [state.words[j], state.words[i]];
+      }
+      state.index = 0;
+      flash();
+      render();
+    }
+
+    function loadWords() {
+      state.words = [
+        { "text": "باب", "hint": "اقرأ الكلمة" },
+        { "text": "ماما", "hint": "اقرأ الكلمة" },
+        { "text": "بابا", "hint": "اقرأ الكلمة" },
+        { "text": "بيت", "hint": "اقرأ الكلمة" },
+        { "text": "شمس", "hint": "اقرأ الكلمة" },
+        { "text": "قمر", "hint": "اقرأ الكلمة" },
+        { "text": "كتاب", "hint": "اقرأ الكلمة" },
+        { "text": "مدرسة", "hint": "اقرأ الكلمة" },
+        { "text": "سيارة", "hint": "اقرأ الكلمة" },
+        { "text": "طائر", "hint": "اقرأ الكلمة" },
+        { "text": "تفاحة", "hint": "اقرأ الكلمة" },
+        { "text": "ماء", "hint": "اقرأ الكلمة" },
+        { "text": "خبز", "hint": "اقرأ الكلمة" },
+        { "text": "حليب", "hint": "اقرأ الكلمة" },
+        { "text": "أخ", "hint": "اقرأ الكلمة" },
+        { "text": "أخت", "hint": "اقرأ الكلمة" },
+        { "text": "أم", "hint": "اقرأ الكلمة" },
+        { "text": "أب", "hint": "اقرأ الكلمة" },
+        { "text": "جد", "hint": "اقرأ الكلمة" },
+        { "text": "جدة", "hint": "اقرأ الكلمة" },
+        { "text": "ولد", "hint": "اقرأ الكلمة" },
+        { "text": "بنت", "hint": "اقرأ الكلمة" },
+        { "text": "طفل", "hint": "اقرأ الكلمة" },
+        { "text": "طفلة", "hint": "اقرأ الكلمة" },
+        { "text": "رجل", "hint": "اقرأ الكلمة" },
+        { "text": "امرأة", "hint": "اقرأ الكلمة" },
+        { "text": "معلم", "hint": "اقرأ الكلمة" },
+        { "text": "معلمة", "hint": "اقرأ الكلمة" },
+        { "text": "طالب", "hint": "اقرأ الكلمة" },
+        { "text": "طالبة", "hint": "اقرأ الكلمة" },
+        { "text": "قلم", "hint": "اقرأ الكلمة" },
+        { "text": "دفتر", "hint": "اقرأ الكلمة" },
+        { "text": "سبورة", "hint": "اقرأ الكلمة" },
+        { "text": "كرسي", "hint": "اقرأ الكلمة" },
+        { "text": "طاولة", "hint": "اقرأ الكلمة" },
+        { "text": "نافذة", "hint": "اقرأ الكلمة" },
+        { "text": "باب", "hint": "اقرأ الكلمة" },
+        { "text": "شباك", "hint": "اقرأ الكلمة" },
+        { "text": "شارع", "hint": "اقرأ الكلمة" },
+        { "text": "مدينة", "hint": "اقرأ الكلمة" },
+        { "text": "قرية", "hint": "اقرأ الكلمة" },
+        { "text": "حديقة", "hint": "اقرأ الكلمة" },
+        { "text": "شجرة", "hint": "اقرأ الكلمة" },
+        { "text": "زهرة", "hint": "اقرأ الكلمة" },
+        { "text": "وردة", "hint": "اقرأ الكلمة" },
+        { "text": "عصفور", "hint": "اقرأ الكلمة" },
+        { "text": "قطة", "hint": "اقرأ الكلمة" },
+        { "text": "كلب", "hint": "اقرأ الكلمة" },
+        { "text": "سمكة", "hint": "اقرأ الكلمة" },
+        { "text": "حصان", "hint": "اقرأ الكلمة" },
+        { "text": "بقرة", "hint": "اقرأ الكلمة" },
+        { "text": "دجاجة", "hint": "اقرأ الكلمة" },
+        { "text": "خروف", "hint": "اقرأ الكلمة" },
+        { "text": "جمل", "hint": "اقرأ الكلمة" },
+        { "text": "أسد", "hint": "اقرأ الكلمة" },
+        { "text": "فيل", "hint": "اقرأ الكلمة" },
+        { "text": "فأر", "hint": "اقرأ الكلمة" },
+        { "text": "أرنب", "hint": "اقرأ الكلمة" },
+        { "text": "سماء", "hint": "اقرأ الكلمة" },
+        { "text": "نجم", "hint": "اقرأ الكلمة" },
+        { "text": "سحاب", "hint": "اقرأ الكلمة" },
+        { "text": "مطر", "hint": "اقرأ الكلمة" },
+        { "text": "ثلج", "hint": "اقرأ الكلمة" },
+        { "text": "ريح", "hint": "اقرأ الكلمة" },
+        { "text": "بحر", "hint": "اقرأ الكلمة" },
+        { "text": "نهر", "hint": "اقرأ الكلمة" },
+        { "text": "جبل", "hint": "اقرأ الكلمة" },
+        { "text": "وادي", "hint": "اقرأ الكلمة" },
+        { "text": "رمل", "hint": "اقرأ الكلمة" },
+        { "text": "صخر", "hint": "اقرأ الكلمة" },
+        { "text": "أخضر", "hint": "اقرأ الكلمة" },
+        { "text": "أحمر", "hint": "اقرأ الكلمة" },
+        { "text": "أزرق", "hint": "اقرأ الكلمة" },
+        { "text": "أصفر", "hint": "اقرأ الكلمة" },
+        { "text": "أسود", "hint": "اقرأ الكلمة" },
+        { "text": "أبيض", "hint": "اقرأ الكلمة" },
+        { "text": "برتقالي", "hint": "اقرأ الكلمة" },
+        { "text": "وردي", "hint": "اقرأ الكلمة" },
+        { "text": "بنفسجي", "hint": "اقرأ الكلمة" },
+        { "text": "بني", "hint": "اقرأ الكلمة" },
+        { "text": "كبير", "hint": "اقرأ الكلمة" },
+        { "text": "صغير", "hint": "اقرأ الكلمة" },
+        { "text": "طويل", "hint": "اقرأ الكلمة" },
+        { "text": "قصير", "hint": "اقرأ الكلمة" },
+        { "text": "سريع", "hint": "اقرأ الكلمة" },
+        { "text": "بطيء", "hint": "اقرأ الكلمة" },
+        { "text": "جديد", "hint": "اقرأ الكلمة" },
+        { "text": "قديم", "hint": "اقرأ الكلمة" },
+        { "text": "نظيف", "hint": "اقرأ الكلمة" },
+        { "text": "متسخ", "hint": "اقرأ الكلمة" },
+        { "text": "سعيد", "hint": "اقرأ الكلمة" },
+        { "text": "حزين", "hint": "اقرأ الكلمة" },
+        { "text": "جائع", "hint": "اقرأ الكلمة" },
+        { "text": "عطشان", "hint": "اقرأ الكلمة" },
+        { "text": "نائم", "hint": "اقرأ الكلمة" },
+        { "text": "مستيقظ", "hint": "اقرأ الكلمة" },
+        { "text": "واقف", "hint": "اقرأ الكلمة" },
+        { "text": "جالس", "hint": "اقرأ الكلمة" },
+        { "text": "مشي", "hint": "اقرأ الكلمة" },
+        { "text": "يجري", "hint": "اقرأ الكلمة" },
+        { "text": "يلعب", "hint": "اقرأ الكلمة" },
+        { "text": "يقرأ", "hint": "اقرأ الكلمة" },
+        { "text": "يكتب", "hint": "اقرأ الكلمة" },
+        { "text": "يأكل", "hint": "اقرأ الكلمة" },
+        { "text": "يشرب", "hint": "اقرأ الكلمة" },
+        { "text": "يغسل", "hint": "اقرأ الكلمة" },
+        { "text": "يفتح", "hint": "اقرأ الكلمة" },
+        { "text": "يغلق", "hint": "اقرأ الكلمة" },
+        { "text": "يدخل", "hint": "اقرأ الكلمة" },
+        { "text": "يخرج", "hint": "اقرأ الكلمة" },
+        { "text": "فوق", "hint": "اقرأ الكلمة" },
+        { "text": "تحت", "hint": "اقرأ الكلمة" },
+        { "text": "أمام", "hint": "اقرأ الكلمة" },
+        { "text": "خلف", "hint": "اقرأ الكلمة" },
+        { "text": "يمين", "hint": "اقرأ الكلمة" },
+        { "text": "يسار", "hint": "اقرأ الكلمة" },
+        { "text": "هنا", "hint": "اقرأ الكلمة" },
+        { "text": "هناك", "hint": "اقرأ الكلمة" },
+        { "text": "اليوم", "hint": "اقرأ الكلمة" },
+        { "text": "غدًا", "hint": "اقرأ الكلمة" },
+        { "text": "أمس", "hint": "اقرأ الكلمة" },
+        { "text": "صباح", "hint": "اقرأ الكلمة" },
+        { "text": "مساء", "hint": "اقرأ الكلمة" },
+        { "text": "ليل", "hint": "اقرأ الكلمة" },
+        { "text": "نهار", "hint": "اقرأ الكلمة" },
+        { "text": "ساعة", "hint": "اقرأ الكلمة" },
+        { "text": "دقيقة", "hint": "اقرأ الكلمة" },
+        { "text": "يوم", "hint": "اقرأ الكلمة" },
+        { "text": "أسبوع", "hint": "اقرأ الكلمة" },
+        { "text": "شهر", "hint": "اقرأ الكلمة" },
+        { "text": "سنة", "hint": "اقرأ الكلمة" },
+        { "text": "واحد", "hint": "اقرأ الكلمة" },
+        { "text": "اثنان", "hint": "اقرأ الكلمة" },
+        { "text": "ثلاثة", "hint": "اقرأ الكلمة" },
+        { "text": "أربعة", "hint": "اقرأ الكلمة" },
+        { "text": "خمسة", "hint": "اقرأ الكلمة" },
+        { "text": "ستة", "hint": "اقرأ الكلمة" },
+        { "text": "سبعة", "hint": "اقرأ الكلمة" },
+        { "text": "ثمانية", "hint": "اقرأ الكلمة" },
+        { "text": "تسعة", "hint": "اقرأ الكلمة" },
+        { "text": "عشرة", "hint": "اقرأ الكلمة" },
+        { "text": "نعم", "hint": "اقرأ الكلمة" },
+        { "text": "لا", "hint": "اقرأ الكلمة" },
+        { "text": "من", "hint": "اقرأ الكلمة" },
+        { "text": "إلى", "hint": "اقرأ الكلمة" },
+        { "text": "في", "hint": "اقرأ الكلمة" },
+        { "text": "على", "hint": "اقرأ الكلمة" },
+        { "text": "مع", "hint": "اقرأ الكلمة" },
+        { "text": "عن", "hint": "اقرأ الكلمة" },
+        { "text": "هذا", "hint": "اقرأ الكلمة" },
+        { "text": "هذه", "hint": "اقرأ الكلمة" },
+        { "text": "ذلك", "hint": "اقرأ الكلمة" },
+        { "text": "تلك", "hint": "اقرأ الكلمة" },
+        { "text": "أنا", "hint": "اقرأ الكلمة" },
+        { "text": "أنت", "hint": "اقرأ الكلمة" },
+        { "text": "هو", "hint": "اقرأ الكلمة" },
+        { "text": "هي", "hint": "اقرأ الكلمة" },
+        { "text": "نحن", "hint": "اقرأ الكلمة" },
+        { "text": "أنتم", "hint": "اقرأ الكلمة" },
+        { "text": "هم", "hint": "اقرأ الكلمة" },
+        { "text": "مرحبا", "hint": "اقرأ الكلمة" },
+        { "text": "شكرا", "hint": "اقرأ الكلمة" },
+        { "text": "من فضلك", "hint": "اقرأ العبارة" },
+        { "text": "كيف حالك", "hint": "اقرأ العبارة" },
+        { "text": "أنا بخير", "hint": "اقرأ العبارة" },
+        { "text": "أحب القراءة", "hint": "اقرأ العبارة" },
+        { "text": "أريد ماء", "hint": "اقرأ العبارة" },
+        { "text": "أين البيت", "hint": "اقرأ العبارة" },
+        { "text": "أنا أدرس", "hint": "اقرأ العبارة" },
+        { "text": "ذهب الولد إلى المدرسة", "hint": "اقرأ العبارة" },
+        { "text": "تلعب الطفلة بالكرة", "hint": "اقرأ العبارة" },
+        { "text": "الشمس مشرقة", "hint": "اقرأ العبارة" },
+        { "text": "القمر جميل", "hint": "اقرأ العبارة" },
+        { "text": "الكتاب مفيد", "hint": "اقرأ العبارة" },
+        { "text": "السماء زرقاء", "hint": "اقرأ العبارة" },
+        { "text": "البيت كبير", "hint": "اقرأ العبارة" },
+        { "text": "باب المدرسة", "hint": "اقرأ العبارة" },
+        { "text": "قلم أحمر", "hint": "اقرأ العبارة" },
+        { "text": "كتاب جديد", "hint": "اقرأ العبارة" },
+        { "text": "طاولة نظيفة", "hint": "اقرأ العبارة" },
+        { "text": "ولد سعيد", "hint": "اقرأ العبارة" },
+        { "text": "بنت ذكية", "hint": "اقرأ العبارة" },
+        { "text": "قطة صغيرة", "hint": "اقرأ العبارة" },
+        { "text": "كلب كبير", "hint": "اقرأ العبارة" },
+        { "text": "شجرة طويلة", "hint": "اقرأ العبارة" },
+        { "text": "زهرة جميلة", "hint": "اقرأ العبارة" },
+        { "text": "ماء بارد", "hint": "اقرأ العبارة" },
+        { "text": "خبز طازج", "hint": "اقرأ العبارة" },
+        { "text": "حليب أبيض", "hint": "اقرأ العبارة" },
+        { "text": "سيارة سريعة", "hint": "اقرأ العبارة" },
+        { "text": "طائر صغير", "hint": "اقرأ العبارة" },
+        { "text": "قمر أبيض", "hint": "اقرأ العبارة" },
+        { "text": "شمس حارة", "hint": "اقرأ العبارة" },
+        { "text": "بيت جميل", "hint": "اقرأ العبارة" },
+        { "text": "حديقة خضراء", "hint": "اقرأ العبارة" },
+        { "text": "ماء نظيف", "hint": "اقرأ العبارة" },
+        { "text": "غرفة كبيرة", "hint": "اقرأ العبارة" },
+        { "text": "باب مفتوح", "hint": "اقرأ العبارة" },
+        { "text": "باب مغلق", "hint": "اقرأ العبارة" },
+        { "text": "الطفل يقرأ", "hint": "اقرأ العبارة" }
+      ];
+      render();
+    }
+
+    document.getElementById("nextBtn").addEventListener("click", next);
+    document.getElementById("prevBtn").addEventListener("click", prev);
+    document.getElementById("shuffleBtn").addEventListener("click", shuffle);
+    card.addEventListener("click", next);
+
+    window.addEventListener("keydown", (event) => {
+      if (event.key === "ArrowRight" || event.key === "ArrowDown" || event.key === " ") {
+        event.preventDefault();
+        next();
+      } else if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
+        event.preventDefault();
+        prev();
+      }
+    });
+
+    loadWords();
+  </script>
+</body>
+</html>
