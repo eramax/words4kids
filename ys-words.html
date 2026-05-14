@@ -188,6 +188,12 @@
       box-shadow: 0 10px 22px rgba(0,0,0,0.18);
     }
 
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.55;
+      box-shadow: none;
+    }
+
     .hint {
       text-align: center;
       color: rgba(203, 213, 225, 0.8);
@@ -223,6 +229,7 @@
 
     <nav class="controls" aria-label="بطاقات التحكم">
       <button class="ghost" id="prevBtn">السابق</button>
+      <button class="ghost" id="listenBtn">اِسْتَمِعْ</button>
       <button class="secondary" id="nextBtn">التالي</button>
     </nav>
 
@@ -239,6 +246,13 @@
     const wordEl = document.getElementById("word");
     const subtextEl = document.getElementById("subtext");
     const counterEl = document.getElementById("counter");
+    const listenBtn = document.getElementById("listenBtn");
+
+    const speechState = {
+      isSupported: "speechSynthesis" in window && "SpeechSynthesisUtterance" in window,
+      voices: [],
+      isSpeaking: false,
+    };
 
     const HARAKAT_CLASS_MAP = {
       "\u064E": "haraka-fatha",
@@ -294,6 +308,96 @@
       `;
     }
 
+    function getBrowserName() {
+      const userAgent = navigator.userAgent;
+
+      if (userAgent.includes("Edg/")) return "edge";
+      if (userAgent.includes("Chrome/")) return "chrome";
+      return "other";
+    }
+
+    function normalizeVoiceText(text) {
+      return text.toLowerCase().replaceAll("_", "-");
+    }
+
+    function selectBestArabicVoice(voices) {
+      const browserName = getBrowserName();
+      const rankedVoices = voices
+        .map((voice) => {
+          const lang = normalizeVoiceText(voice.lang || "");
+          const name = normalizeVoiceText(voice.name || "");
+          let score = 0;
+
+          if (lang === "ar-eg") score += 100;
+          if (name.includes("egypt") || name.includes("egyptian") || name.includes("مصر")) score += 60;
+          if (lang.startsWith("ar")) score += 40;
+          if (browserName === "edge" && (name.includes("microsoft") || name.includes("online"))) score += 10;
+          if (browserName === "chrome" && name.includes("google")) score += 10;
+          if (voice.default) score += 5;
+
+          return { voice, score };
+        })
+        .filter(({ score }) => score > 0)
+        .sort((left, right) => right.score - left.score);
+
+      return rankedVoices[0]?.voice ?? null;
+    }
+
+    function updateListenButton() {
+      if (!listenBtn) return;
+
+      const hasCurrentWord = Boolean(state.words[state.index]?.text);
+      listenBtn.disabled = !speechState.isSupported || !hasCurrentWord;
+      listenBtn.textContent = speechState.isSpeaking ? "يَجْرِي الاِسْتِمَاعُ..." : "اِسْتَمِعْ";
+    }
+
+    function loadVoices() {
+      if (!speechState.isSupported) {
+        updateListenButton();
+        return;
+      }
+
+      speechState.voices = window.speechSynthesis.getVoices();
+      updateListenButton();
+    }
+
+    function speakCurrentWord() {
+      const current = state.words[state.index];
+      if (!speechState.isSupported || !current?.text) return;
+
+      window.speechSynthesis.cancel();
+
+      const utterance = new SpeechSynthesisUtterance(current.text);
+      const selectedVoice = selectBestArabicVoice(speechState.voices);
+
+      utterance.lang = "ar-EG";
+      utterance.rate = 0.82;
+      utterance.pitch = 1;
+      utterance.volume = 1;
+
+      if (selectedVoice) {
+        utterance.voice = selectedVoice;
+        utterance.lang = selectedVoice.lang || "ar-EG";
+      }
+
+      utterance.onstart = () => {
+        speechState.isSpeaking = true;
+        updateListenButton();
+      };
+
+      utterance.onend = () => {
+        speechState.isSpeaking = false;
+        updateListenButton();
+      };
+
+      utterance.onerror = () => {
+        speechState.isSpeaking = false;
+        updateListenButton();
+      };
+
+      window.speechSynthesis.speak(utterance);
+    }
+
     function flash() {
       card.classList.add("flash");
       window.setTimeout(() => card.classList.remove("flash"), 160);
@@ -309,6 +413,7 @@
       subtextEl.style.display = current ? "block" : "none";
       counterEl.textContent = `${total ? state.index + 1 : 0} / ${total}`;
       document.title = current?.text ? `${current.text} - بطاقات القراءة` : "بطاقات القراءة";
+      updateListenButton();
     }
 
     function next() {
@@ -420,6 +525,7 @@
 
     document.getElementById("nextBtn").addEventListener("click", next);
     document.getElementById("prevBtn").addEventListener("click", prev);
+    listenBtn.addEventListener("click", speakCurrentWord);
     card.addEventListener("click", next);
 
     window.addEventListener("keydown", (event) => {
@@ -431,6 +537,13 @@
         prev();
       }
     });
+
+    if (speechState.isSupported) {
+      window.speechSynthesis.addEventListener("voiceschanged", loadVoices);
+      loadVoices();
+    } else {
+      updateListenButton();
+    }
 
     loadWords();
   </script>
