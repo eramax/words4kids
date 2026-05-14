@@ -1,11 +1,11 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 
-const html = fs.readFileSync(new URL("../ys-words.html", import.meta.url), "utf8");
+const html = fs.readFileSync(new URL("../index.html", import.meta.url), "utf8");
 
 function extractWords(source) {
   const match = source.match(/state\.words\s*=\s*(\[[\s\S]*?\]);/);
-  assert.ok(match, "Expected words array in ys-words.html");
+  assert.ok(match, "Expected words array in index.html");
   return Function(`"use strict"; return (${match[1]});`)();
 }
 

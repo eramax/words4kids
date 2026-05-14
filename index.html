@@ -201,6 +201,14 @@
       padding-bottom: 4px;
     }
 
+    .speech-status {
+      text-align: center;
+      color: rgba(248, 250, 252, 0.72);
+      font-size: 13px;
+      min-height: 1.2em;
+      padding-top: 2px;
+    }
+
     @media (max-width: 640px) {
       .app { padding: 12px; }
       .topbar { padding: 8px 4px; font-size: 14px; }
@@ -233,6 +241,7 @@
       <button class="secondary" id="nextBtn">التالي</button>
     </nav>
 
+    <div class="speech-status" id="speechStatus" aria-live="polite"></div>
     <div class="hint">يمكنك استخدام الأسهم في لوحة المفاتيح أو النقر على الشاشة.</div>
   </main>
 
@@ -247,6 +256,7 @@
     const subtextEl = document.getElementById("subtext");
     const counterEl = document.getElementById("counter");
     const listenBtn = document.getElementById("listenBtn");
+    const speechStatusEl = document.getElementById("speechStatus");
 
     const speechState = {
       isSupported: "speechSynthesis" in window && "SpeechSynthesisUtterance" in window,
@@ -340,7 +350,7 @@
         .filter(({ score }) => score > 0)
         .sort((left, right) => right.score - left.score);
 
-      return rankedVoices[0]?.voice ?? null;
+      return rankedVoices[0]?.voice ?? voices[0] ?? null;
     }
 
     function updateListenButton() {
@@ -351,6 +361,11 @@
       listenBtn.textContent = speechState.isSpeaking ? "يَجْرِي الاِسْتِمَاعُ..." : "اِسْتَمِعْ";
     }
 
+    function updateSpeechStatus(message) {
+      if (!speechStatusEl) return;
+      speechStatusEl.textContent = message || "";
+    }
+
     function loadVoices() {
       if (!speechState.isSupported) {
         updateListenButton();
@@ -358,14 +373,32 @@
       }
 
       speechState.voices = window.speechSynthesis.getVoices();
+      const selectedVoice = selectBestArabicVoice(speechState.voices);
+      updateSpeechStatus(
+        selectedVoice
+          ? `الصوت المختار: ${selectedVoice.name}${selectedVoice.lang ? ` (${selectedVoice.lang})` : ""}`
+          : "لا توجد أصوات متاحة بعد.",
+      );
       updateListenButton();
     }
 
-    function speakCurrentWord() {
+    async function ensureVoices() {
+      if (!speechState.isSupported) return;
+
+      for (let attempt = 0; attempt < 10 && speechState.voices.length === 0; attempt++) {
+        speechState.voices = window.speechSynthesis.getVoices();
+        if (speechState.voices.length) break;
+        await new Promise((resolve) => window.setTimeout(resolve, 100));
+      }
+    }
+
+    async function speakCurrentWord() {
       const current = state.words[state.index];
       if (!speechState.isSupported || !current?.text) return;
 
       window.speechSynthesis.cancel();
+      window.speechSynthesis.resume();
+      await ensureVoices();
 
       const utterance = new SpeechSynthesisUtterance(current.text);
       const selectedVoice = selectBestArabicVoice(speechState.voices);
@@ -378,6 +411,9 @@
       if (selectedVoice) {
         utterance.voice = selectedVoice;
         utterance.lang = selectedVoice.lang || "ar-EG";
+        updateSpeechStatus(`يتم استخدام: ${selectedVoice.name}${selectedVoice.lang ? ` (${selectedVoice.lang})` : ""}`);
+      } else {
+        updateSpeechStatus("لا توجد أصوات عربية متاحة في هذا المتصفح.");
       }
 
       utterance.onstart = () => {
@@ -395,7 +431,7 @@
         updateListenButton();
       };
 
-      window.speechSynthesis.speak(utterance);
+      window.setTimeout(() => window.speechSynthesis.speak(utterance), 0);
     }
 
     function flash() {
@@ -414,6 +450,14 @@
       counterEl.textContent = `${total ? state.index + 1 : 0} / ${total}`;
       document.title = current?.text ? `${current.text} - بطاقات القراءة` : "بطاقات القراءة";
       updateListenButton();
+      if (speechState.isSupported && speechState.voices.length) {
+        const selectedVoice = selectBestArabicVoice(speechState.voices);
+        updateSpeechStatus(
+          selectedVoice
+            ? `الصوت المختار: ${selectedVoice.name}${selectedVoice.lang ? ` (${selectedVoice.lang})` : ""}`
+            : "لا توجد أصوات عربية متاحة في هذا المتصفح.",
+        );
+      }
     }
 
     function next() {
@@ -540,9 +584,11 @@
 
     if (speechState.isSupported) {
       window.speechSynthesis.addEventListener("voiceschanged", loadVoices);
+      window.speechSynthesis.onvoiceschanged = loadVoices;
       loadVoices();
     } else {
       updateListenButton();
+      updateSpeechStatus("هذا المتصفح لا يدعم تحويل النص إلى كلام.");
     }
 
     loadWords();
